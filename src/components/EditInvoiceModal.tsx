@@ -127,6 +127,7 @@ export function EditInvoiceModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      {console.log('Rendering EditInvoiceModal with fileUrl:', fileUrl)}
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">
@@ -209,7 +210,8 @@ export function EditInvoiceModal({
             )}
           </div>
           
-          <div>
+          {/* File Upload Section - Always display this */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Invoice Document
             </label>

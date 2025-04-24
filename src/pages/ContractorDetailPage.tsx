@@ -42,10 +42,21 @@ function ContractorDetailPage() {
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
         .select(`
-          *,
+          id,
+          contractor_id,
+          project_id,
+          invoice_number,
+          description,
+          amount,
+          file_url,
+          status,
+          due_date,
+          created_at,
           project:projects(*)
         `)
         .eq('contractor_id', contractorId);
+
+      console.log('Loaded invoices with file_url:', invoicesData);
 
       if (invoicesError) throw invoicesError;
       setInvoices(invoicesData);
