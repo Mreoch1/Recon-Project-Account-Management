@@ -9,7 +9,7 @@ Since we're encountering issues with programmatic bucket creation due to permiss
 3. In the left sidebar, click on **Storage**
 4. Click the **+ Create Bucket** button
 5. Enter the following settings:
-   - **Bucket Name**: `invoice_attachments` (exactly as written)
+   - **Bucket Name**: `invoice-attachments` (exactly as written, using hyphens instead of underscores)
    - **Public Bucket**: Leave UNCHECKED (this should be a private bucket)
    - **File Size Limit**: 10MB
 6. Click **Create**
@@ -18,7 +18,7 @@ Since we're encountering issues with programmatic bucket creation due to permiss
 
 After creating the bucket, you need to add policies to allow authenticated users to work with files:
 
-1. In the Storage section, click on your newly created `invoice_attachments` bucket
+1. In the Storage section, click on your newly created `invoice-attachments` bucket
 2. Click on the **Policies** tab
 3. Add the following policies for authenticated users:
 

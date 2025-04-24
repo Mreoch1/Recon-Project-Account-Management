@@ -2,9 +2,9 @@
 -- Only create if it doesn't exist
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'invoice_attachments') THEN
+  IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'invoice-attachments') THEN
     INSERT INTO storage.buckets (id, name, public)
-    VALUES ('invoice_attachments', 'invoice_attachments', false);
+    VALUES ('invoice-attachments', 'invoice-attachments', false);
   END IF;
 END
 $$;
@@ -15,28 +15,28 @@ CREATE POLICY "Users can upload invoice files"
   ON storage.objects
   FOR INSERT
   TO authenticated
-  WITH CHECK (bucket_id = 'invoice_attachments');
+  WITH CHECK (bucket_id = 'invoice-attachments');
 
 DROP POLICY IF EXISTS "Users can read their invoice files" ON storage.objects;
 CREATE POLICY "Users can read their invoice files"
   ON storage.objects
   FOR SELECT
   TO authenticated
-  USING (bucket_id = 'invoice_attachments');
+  USING (bucket_id = 'invoice-attachments');
 
 DROP POLICY IF EXISTS "Users can update their invoice files" ON storage.objects;
 CREATE POLICY "Users can update their invoice files"
   ON storage.objects
   FOR UPDATE
   TO authenticated
-  USING (bucket_id = 'invoice_attachments');
+  USING (bucket_id = 'invoice-attachments');
 
 DROP POLICY IF EXISTS "Users can delete their invoice files" ON storage.objects;
 CREATE POLICY "Users can delete their invoice files"
   ON storage.objects
   FOR DELETE
   TO authenticated
-  USING (bucket_id = 'invoice_attachments');
+  USING (bucket_id = 'invoice-attachments');
 
 -- Add file_url field to invoices table if it doesn't exist
 DO $$

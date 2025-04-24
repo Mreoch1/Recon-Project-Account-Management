@@ -11,6 +11,9 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 
+// Bucket must only contain lowercase letters, numbers, dots, and hyphens
+const BUCKET_NAME = 'invoice-attachments';
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function createBucket() {
@@ -22,13 +25,13 @@ async function createBucket() {
       throw getBucketsError;
     }
     
-    const bucketExists = buckets.some(bucket => bucket.name === 'invoice_attachments');
+    const bucketExists = buckets.some(bucket => bucket.name === BUCKET_NAME);
     
     if (bucketExists) {
-      console.log('Bucket "invoice_attachments" already exists.');
+      console.log(`Bucket "${BUCKET_NAME}" already exists.`);
     } else {
       // Create the bucket
-      const { data, error } = await supabase.storage.createBucket('invoice_attachments', {
+      const { data, error } = await supabase.storage.createBucket(BUCKET_NAME, {
         public: false,
         fileSizeLimit: 10485760, // 10MB in bytes
         allowedMimeTypes: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
@@ -38,7 +41,7 @@ async function createBucket() {
         throw error;
       }
       
-      console.log('Successfully created bucket "invoice_attachments":', data);
+      console.log(`Successfully created bucket "${BUCKET_NAME}":`, data);
     }
     
     // Add bucket policies - this requires the service role key
@@ -47,7 +50,7 @@ async function createBucket() {
     // Allow users to upload files to this bucket
     const { error: insertPolicyError } = await supabase.rpc('create_storage_policy', {
       name: 'Users can upload invoice files',
-      bucket_name: 'invoice_attachments',
+      bucket_name: BUCKET_NAME,
       operation: 'INSERT',
       actor_role: 'authenticated',
       check_expression: 'true' // Allow authenticated users to upload files
@@ -62,7 +65,7 @@ async function createBucket() {
     // Allow users to read files from this bucket
     const { error: selectPolicyError } = await supabase.rpc('create_storage_policy', {
       name: 'Users can read their invoice files',
-      bucket_name: 'invoice_attachments',
+      bucket_name: BUCKET_NAME,
       operation: 'SELECT',
       actor_role: 'authenticated',
       check_expression: 'true' // Allow authenticated users to read files
@@ -77,7 +80,7 @@ async function createBucket() {
     // Allow users to update their files
     const { error: updatePolicyError } = await supabase.rpc('create_storage_policy', {
       name: 'Users can update their invoice files',
-      bucket_name: 'invoice_attachments',
+      bucket_name: BUCKET_NAME,
       operation: 'UPDATE',
       actor_role: 'authenticated',
       check_expression: 'true' // Allow authenticated users to update files
@@ -92,7 +95,7 @@ async function createBucket() {
     // Allow users to delete their files
     const { error: deletePolicyError } = await supabase.rpc('create_storage_policy', {
       name: 'Users can delete their invoice files',
-      bucket_name: 'invoice_attachments',
+      bucket_name: BUCKET_NAME,
       operation: 'DELETE',
       actor_role: 'authenticated',
       check_expression: 'true' // Allow authenticated users to delete files

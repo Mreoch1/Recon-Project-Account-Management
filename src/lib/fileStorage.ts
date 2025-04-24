@@ -1,7 +1,8 @@
 import { supabase } from './supabase';
 
 // Bucket name - change this if the bucket has a different name in Supabase
-const BUCKET_NAME = 'invoice_attachments';
+// Must only contain lowercase letters, numbers, dots, and hyphens
+const BUCKET_NAME = 'invoice-attachments';
 
 /**
  * Uploads a file to Supabase Storage
