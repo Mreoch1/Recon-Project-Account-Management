@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Receipt } from 'lucide-react';
+import { X, CreditCard, Receipt, FileText, Download } from 'lucide-react';
 import { Invoice } from '../lib/types';
+import { FileUploader } from './FileUploader';
+import { uploadFile, getFileUrl } from '../lib/fileStorage';
 
 interface EditInvoiceModalProps {
   invoice?: Invoice;
@@ -23,6 +25,17 @@ export function EditInvoiceModal({
     amount: '',
     isCredit: false
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Get filename from file_url path
+  const getFileNameFromUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    const pathParts = url.split('/');
+    return pathParts[pathParts.length - 1];
+  };
 
   // Update form data when invoice changes or modal opens
   useEffect(() => {
@@ -33,6 +46,7 @@ export function EditInvoiceModal({
         amount: Math.abs(invoice.amount).toString(),
         isCredit: invoice.amount < 0
       });
+      setFileUrl(invoice.file_url);
     } else if (!invoice && isOpen) {
       // Reset form for new invoice
       setFormData({
@@ -41,23 +55,74 @@ export function EditInvoiceModal({
         amount: '',
         isCredit: false
       });
+      setSelectedFile(null);
+      setFileUrl(null);
+      setUploadError(null);
     }
   }, [invoice, isOpen]);
 
   if (!isOpen) return null;
+
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setUploadError(null);
+  };
+
+  const handleClearFile = () => {
+    setSelectedFile(null);
+    setFileUrl(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = formData.amount === '' ? 0 : parseFloat(formData.amount);
     if (isNaN(amount)) return;
     
+    let finalFileUrl = fileUrl;
+    
+    // If a new file is selected, upload it
+    if (selectedFile) {
+      setIsUploading(true);
+      setUploadError(null);
+      
+      try {
+        // Create a unique file path based on the invoice number and file name
+        const fileName = `${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const filePath = `${invoice?.id || 'new'}/${fileName}`;
+        
+        const uploadedUrl = await uploadFile(selectedFile, filePath);
+        
+        if (!uploadedUrl) {
+          setUploadError('Failed to upload file. Please try again.');
+          setIsUploading(false);
+          return;
+        }
+        
+        finalFileUrl = uploadedUrl;
+      } catch (error) {
+        console.error('Error during file upload:', error);
+        setUploadError('An error occurred during upload');
+        setIsUploading(false);
+        return;
+      }
+      
+      setIsUploading(false);
+    }
+    
     // Only send the fields that exist in the database schema
     await onSave({
       invoice_number: formData.invoice_number,
       description: formData.description,
-      amount: amount * (formData.isCredit ? -1 : 1)
+      amount: amount * (formData.isCredit ? -1 : 1),
+      file_url: finalFileUrl
     });
     onClose();
+  };
+
+  const handleDownload = () => {
+    if (fileUrl) {
+      window.open(fileUrl, '_blank');
+    }
   };
 
   return (
@@ -143,6 +208,39 @@ export function EditInvoiceModal({
               </p>
             )}
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Invoice Document
+            </label>
+            
+            {/* File upload component */}
+            <FileUploader
+              onFileSelect={handleFileSelect}
+              onClearFile={handleClearFile}
+              initialFileName={getFileNameFromUrl(fileUrl)}
+              acceptedFileTypes="application/pdf,image/*,.doc,.docx,.xls,.xlsx"
+              maxSizeMB={10}
+            />
+            
+            {fileUrl && !selectedFile && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download existing file
+                </button>
+              </div>
+            )}
+            
+            {uploadError && (
+              <p className="mt-1 text-sm text-red-600">{uploadError}</p>
+            )}
+          </div>
+          
           <div className="flex justify-end space-x-3 mt-6">
             <button
               type="button"
@@ -153,9 +251,22 @@ export function EditInvoiceModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
+              disabled={isUploading}
+              className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors flex items-center ${
+                isUploading ? 'opacity-70 cursor-not-allowed' : ''
+              }`}
             >
-              {mode === 'edit' ? 'Save Changes' : 'Add Invoice'}
+              {isUploading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Uploading...
+                </>
+              ) : (
+                <>{mode === 'edit' ? 'Save Changes' : 'Add Invoice'}</>
+              )}
             </button>
           </div>
         </form>

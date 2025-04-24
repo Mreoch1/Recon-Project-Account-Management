@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Phone, Mail, Building2, Calendar, DollarSign, Clock, AlertCircle, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Phone, Mail, Building2, Calendar, DollarSign, Clock, AlertCircle, X, TrendingUp, TrendingDown, FileText } from 'lucide-react';
 import { EditContractorModal } from '../components/EditContractorModal';
 import { EditInvoiceModal } from '../components/EditInvoiceModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -109,7 +109,12 @@ function ContractorDetailPage() {
     try {
       const { error } = await supabase
         .from('invoices')
-        .update(data)
+        .update({
+          invoice_number: data.invoice_number,
+          description: data.description,
+          amount: data.amount,
+          file_url: data.file_url,
+        })
         .eq('id', selectedInvoice.id);
 
       if (error) throw error;
@@ -119,6 +124,47 @@ function ContractorDetailPage() {
     } catch (err: any) {
       setError(err.message);
       console.error('Error updating invoice:', err);
+    }
+  };
+
+  const handleAddInvoice = async (data: Partial<Invoice>) => {
+    if (!contractor?.id) return;
+
+    try {
+      // Creates a new invoice for the contractor
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('id')
+        .limit(1);
+
+      if (projectError) throw projectError;
+      
+      const projectId = projectData && projectData.length > 0 ? projectData[0].id : null;
+
+      if (!projectId) {
+        setError('No project found for this invoice. Please add a project first.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('invoices')
+        .insert([{
+          invoice_number: data.invoice_number,
+          description: data.description,
+          amount: data.amount,
+          contractor_id: contractor.id,
+          project_id: projectId,
+          file_url: data.file_url,
+          status: 'pending',
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days from now
+        }]);
+
+      if (error) throw error;
+      await loadContractor();
+      setIsInvoiceModalOpen(false);
+    } catch (err: any) {
+      setError(err.message);
+      console.error('Error adding invoice:', err);
     }
   };
 
@@ -218,7 +264,7 @@ function ContractorDetailPage() {
           setIsInvoiceModalOpen(false);
           setSelectedInvoice(null);
         }}
-        onSave={handleEditInvoice}
+        onSave={selectedInvoice ? handleEditInvoice : handleAddInvoice}
         mode={selectedInvoice ? 'edit' : 'create'}
       />
 
@@ -472,6 +518,9 @@ function ContractorDetailPage() {
                     <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Due Date
                     </th>
+                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Attachment
+                    </th>
                     <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -503,6 +552,21 @@ function ContractorDetailPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(invoice.due_date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.file_url ? (
+                          <a 
+                            href={invoice.file_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 flex items-center"
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            <span>View</span>
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button

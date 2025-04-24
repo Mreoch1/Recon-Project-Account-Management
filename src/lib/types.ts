@@ -46,5 +46,6 @@ export interface Invoice {
   invoice_number: string;
   description: string;
   amount: number;
+  file_url?: string | null;
   project?: Project;
 }
