@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 
+// Bucket name - change this if the bucket has a different name in Supabase
+const BUCKET_NAME = 'invoice_attachments';
+
 /**
  * Uploads a file to Supabase Storage
  * @param file The file to upload
@@ -8,8 +11,25 @@ import { supabase } from './supabase';
  */
 export async function uploadFile(file: File, path: string): Promise<string | null> {
   try {
+    console.log(`Attempting to upload file to bucket: ${BUCKET_NAME}, path: ${path}`);
+    
+    // Check if the bucket exists first
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error('Error listing buckets:', bucketsError);
+      return null;
+    }
+    
+    const bucketExists = buckets.some(bucket => bucket.name === BUCKET_NAME);
+    if (!bucketExists) {
+      console.error(`Bucket "${BUCKET_NAME}" does not exist. Available buckets:`, buckets.map(b => b.name));
+      return null;
+    }
+    
+    // Upload file
     const { data, error } = await supabase.storage
-      .from('invoice_attachments')
+      .from(BUCKET_NAME)
       .upload(path, file, {
         cacheControl: '3600',
         upsert: true,
@@ -20,11 +40,14 @@ export async function uploadFile(file: File, path: string): Promise<string | nul
       return null;
     }
 
+    console.log('File uploaded successfully:', data);
+
     // Get the public URL for the file
     const { data: { publicUrl } } = supabase.storage
-      .from('invoice_attachments')
+      .from(BUCKET_NAME)
       .getPublicUrl(data.path);
 
+    console.log('File public URL:', publicUrl);
     return publicUrl;
   } catch (error) {
     console.error('Error in uploadFile:', error);
@@ -40,7 +63,7 @@ export async function uploadFile(file: File, path: string): Promise<string | nul
 export async function deleteFile(path: string): Promise<boolean> {
   try {
     const { error } = await supabase.storage
-      .from('invoice_attachments')
+      .from(BUCKET_NAME)
       .remove([path]);
 
     if (error) {
@@ -65,7 +88,7 @@ export function getFileUrl(path: string): string | null {
   
   try {
     const { data: { publicUrl } } = supabase.storage
-      .from('invoice_attachments')
+      .from(BUCKET_NAME)
       .getPublicUrl(path);
     
     return publicUrl;
