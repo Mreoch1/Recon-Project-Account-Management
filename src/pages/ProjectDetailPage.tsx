@@ -7,6 +7,7 @@ import { EditInvoiceModal } from '../components/EditInvoiceModal';
 import { EditContractorModal } from '../components/EditContractorModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ContractorCard } from '../components/ContractorCard';
+import { AutoInvoiceUploader } from '../components/AutoInvoiceUploader';
 import { supabase } from '../lib/supabase';
 import { Project, Contractor, ChangeOrder, Invoice } from '../lib/types';
 
@@ -60,6 +61,9 @@ function ProjectDetailPage() {
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
   const [selectedChangeOrder, setSelectedChangeOrder] = useState<ChangeOrder | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  // New state for AutoInvoiceUploader
+  const [showAiUploader, setShowAiUploader] = useState(false);
 
   useEffect(() => {
     loadProjectData();
@@ -807,6 +811,44 @@ function ProjectDetailPage() {
               />
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Invoices Section */}
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden border border-gray-200 w-full">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Invoices</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowAiUploader(!showAiUploader)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+              >
+                {showAiUploader ? 'Hide AI Uploader' : 'Use AI Invoice Processing'}
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedInvoice(null);
+                  setIsInvoiceModalOpen(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add Invoice Manually
+              </button>
+            </div>
+          </div>
+          
+          {showAiUploader && project && (
+            <AutoInvoiceUploader 
+              project={project} 
+              onInvoiceCreated={() => {
+                loadProjectData();
+                setShowAiUploader(false);
+              }} 
+            />
+          )}
+          
+          {/* Rest of the invoices list */}
         </div>
       </div>
     </div>
